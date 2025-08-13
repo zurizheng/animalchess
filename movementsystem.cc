@@ -1,0 +1,157 @@
+#include "movementsystem.h"
+
+#include "board.h"
+#include "constants.h"
+#include "player.h"
+#include "gamepiece.h"
+#include "tileeffect.h"
+
+#include <iostream> // For debugging only
+
+
+MovementSystem::MovementSystem(GamePiece* piece) : piece(piece) {}
+
+
+Constants::MOVE_RESULT MovementSystem::move(Board& board, char dir) {
+    Tile* currentTile = board.getTile(piece->getRow(), piece->getCol());
+    Tile* newTile = getDestinationTile(board, dir);
+    Player* owner = piece->getOwner();
+    
+    if (!newTile) {
+        std::cout << "DEBUG: Invalid move, destination tile is null (this shouldn't happen?)." << std::endl;
+        return Constants::MOVE_INVALID;
+    }
+    
+    TileEffect* effect = newTile->getTileEffect();
+
+    // Check if moving into our own endpoint
+    // Need to do this before wall check bc endpoints are walls, but we move into them
+    // if it's our own endpoint
+    if (effect && effect->isEndpoint()) {
+        if (effect->getPlayer() == owner) {
+            effect->onEnter(piece);
+            if (piece->isDead()) {
+                return Constants::MOVE_DOWNLOADED;
+            }
+            else { // Shouldn't ever happen
+                std::cout << "DEBUG: shouldn't be here #1336984497272"  << std::endl;
+            }
+        }
+    }
+
+    // Check if moving into a wall (or opponents endpoint)
+    if (newTile->getIsWall()) {
+        return Constants::MOVE_WALL;
+    }
+
+    // Can't move into own server pot
+    if (effect && effect->isServerPort()) {
+        if (effect->getPlayer() == owner) {
+            return Constants::MOVE_WALL;
+        }
+    }
+
+    GamePiece* otherPiece = newTile->getPiece();
+    Player* otherOwner = otherPiece ? otherPiece->getOwner() : nullptr;
+
+    // Check if moving onto one of our own pieces
+    if (otherPiece && otherPiece != piece && otherOwner == owner) {
+        return Constants::MOVE_OWNLINK;
+    }
+
+    // Call any onEnter effects (before battle)
+    if (effect) {
+        effect->onEnter(piece);
+        if (piece->isDead()) {
+            return Constants::MOVE_DOWNLOADED;
+        }
+    }
+
+    if (otherPiece && otherOwner != owner) {
+        battle(otherPiece);
+        if (piece->isDead()) {
+            return Constants::MOVE_DOWNLOADED;
+        }
+    }
+
+    leaveTile();
+    enterTile(newTile);
+
+    return Constants::MOVE_SUCCESS;
+}
+
+
+void MovementSystem::leaveTile() {
+    Tile* currentTile = piece->getBoard()->getTile(piece->getRow(), piece->getCol());
+
+    if (currentTile->getTileEffect()) {
+        currentTile->getTileEffect()->onLeave(piece);
+    }
+
+    piece->setPosition(-1, -1); // Invalid position
+    currentTile->setPiece(nullptr);
+
+    // Optional extra behavior when leaving a tile
+    // So piece decorators can add their own behavior (SLIME)
+    piece->onLeaveTile(currentTile);
+
+    currentTile->notify();
+}
+
+
+void MovementSystem::enterTile(Tile* tile) {
+    piece->setPosition(tile->getRow(), tile->getColumn());
+    tile->setPiece(piece);
+    tile->notify();
+}
+
+
+// returns true if attacker wins, false is defender wins
+bool MovementSystem::battle(GamePiece* opponent) {
+
+    // variables for accessing Players
+    Player* winner = nullptr;
+    Player* loser = nullptr;
+    GamePiece* defeatedGamePiece = nullptr;
+    GamePiece* winningGamePiece = nullptr;
+
+    // determine strength
+    int atkStrength = piece->getStrength();
+    int defStrength = opponent->getStrength();
+
+    // compare strength (battling)
+    if (atkStrength >= defStrength) {
+        // attacker wins
+        winner = piece->getOwner();
+        loser = opponent->getOwner();
+        defeatedGamePiece = opponent;
+        winningGamePiece = piece;
+    } else {
+        // defender wins
+        winner = opponent->getOwner();
+        loser = piece->getOwner();
+        defeatedGamePiece = piece;
+        winningGamePiece = opponent;
+    }
+
+    // Winner downloads the defeated piece
+    std::cout << "[INFO] Player " << winner->getIndex() + 1 << " wins battle vs Player " << loser->getIndex() + 1 << std::endl;
+
+    defeatedGamePiece->download(winner);
+
+    // Notify board of winner (bc. it's revealed, shows in graphics)
+    winningGamePiece->getBoard()->notify(
+        *winningGamePiece->getBoard()->getTile(winningGamePiece->getRow(), winningGamePiece->getCol())
+    );
+
+    // return true if the attacker is the winner
+    return winner == piece->getOwner();
+}
+
+void MovementSystem::setGamePiece(GamePiece* piece) {
+    this->piece = piece;
+}
+
+
+
+
