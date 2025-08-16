@@ -48,17 +48,17 @@ void TextView::notify(const Tile& tile) {
 void TextView::printPlayerInfo(std::ostream& out, int playerIndex, bool show) {
     int inc = 0;
     out << "Player " << players[playerIndex].getIndex() + 1 << (show ? ": <- Active Player" : ":") << std::endl;
-    out << "Piece Size: " << players[playerIndex].pieces.size() << std::endl;
-    for (auto& piece : players[playerIndex].pieces) {
-        out << piece.first << ": " << piece.second->getPiece() << piece.second->getStrength();
-        // newline after half of the entries
-        if (++inc == players[playerIndex].pieces.size()/2) {
-            out << std::endl;
-        } else {
-            out << " ";
-        }
-    }
-    out << std::endl;
+    // out << "Piece Size: " << players[playerIndex].pieces.size() << std::endl;
+    // for (auto& piece : players[playerIndex].pieces) {
+    //     out << piece.first << ": " << piece.second->getPiece() << piece.second->getStrength();
+    //     // newline after half of the entries
+    //     if (++inc == players[playerIndex].pieces.size()/2) {
+    //         out << std::endl;
+    //     } else {
+    //         out << " ";
+    //     }
+    // }
+    // out << std::endl;
 }
 
 void TextView::print(std::ostream& out, int playerIndex, bool POV) {
