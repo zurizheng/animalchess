@@ -5,11 +5,11 @@ TrapEffect::TrapEffect(Player* player) : TileEffect(player) {}
 
 
 void TrapEffect::onEnter(GamePiece* piece) {
-    piece->remove();
+    piece->setTrapped(true);
 }
 
 void TrapEffect::onLeave(GamePiece* piece) {
-    piece->remove();
+    piece->setTrapped(false);
 }
 
 bool TrapEffect::isTrap() const {

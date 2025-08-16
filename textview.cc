@@ -2,7 +2,7 @@
 #include "player.h"
 #include "tile.h"
 #include "goaleffect.h"
-
+#include "trapeffect.h"
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -21,21 +21,24 @@ void TextView::notify(const Tile& tile) {
 
     // Priority: Wall -> Link -> TileEffect -> Normal
 
-    if (tile.getIsWall()){
+    if (tile.getIsWall()) {
         grid[row][col] = 'X';
+    }
+    else if (tile.getIsWater()) {
+        grid[row][col] = 'W';
     }
     else if (piece) {
         grid[row][col] = piece->getPiece();
     }
     else if (tileEffect) {
         // type checking
-        if (auto* s = dynamic_cast<GoalEffect*>(tileEffect)) {
-            if (players.size() > 2) {
-                grid[row][col] = '$';
-            } else {
-                grid[row][col] = 'S';
-            }
-        } else {
+        if (auto* g = dynamic_cast<GoalEffect*>(tileEffect)) {
+            grid[row][col] = 'G';
+        }
+        else if (auto* t = dynamic_cast<TrapEffect*>(tileEffect)) {
+            grid[row][col] = 'T';
+        }
+        else {
             grid[row][col] = '&'; // Endpoint tiles
         }
     }
@@ -48,17 +51,16 @@ void TextView::notify(const Tile& tile) {
 void TextView::printPlayerInfo(std::ostream& out, int playerIndex, bool show) {
     int inc = 0;
     out << "Player " << players[playerIndex].getIndex() + 1 << (show ? ": <- Active Player" : ":") << std::endl;
-    // out << "Piece Size: " << players[playerIndex].pieces.size() << std::endl;
-    // for (auto& piece : players[playerIndex].pieces) {
-    //     out << piece.first << ": " << piece.second->getPiece() << piece.second->getStrength();
-    //     // newline after half of the entries
-    //     if (++inc == players[playerIndex].pieces.size()/2) {
-    //         out << std::endl;
-    //     } else {
-    //         out << " ";
-    //     }
-    // }
-    // out << std::endl;
+    for (auto& piece : players[playerIndex].pieces) {
+        out << piece.first << ": " << piece.second->getPiece() << piece.second->getStrength();
+        // newline after half of the entries
+        if (++inc == players[playerIndex].pieces.size()/2) {
+            out << std::endl;
+        } else {
+            out << " ";
+        }
+    }
+    out << std::endl;
 }
 
 void TextView::print(std::ostream& out, int playerIndex, bool POV) {

@@ -114,8 +114,22 @@ bool MovementSystem::battle(GamePiece* opponent) {
     int atkStrength = piece->getStrength();
     int defStrength = opponent->getStrength();
 
+    // unique: mouse beats elephant
+    if (atkStrength == 1 && defStrength == 8) {
+        // attacker is mouse and defender is elephant, attacker wins
+        winner = piece->getOwner();
+        loser = opponent->getOwner();
+        defeatedGamePiece = opponent;
+        winningGamePiece = piece;
+    } else if (atkStrength == 8 && defStrength == 1) {
+        // attacker is elephant and defender is mouse, defender wins
+        winner = opponent->getOwner();
+        loser = piece->getOwner();
+        defeatedGamePiece = piece;
+        winningGamePiece = opponent;
+    }
     // compare strength (battling)
-    if (atkStrength >= defStrength) {
+    else if (atkStrength >= defStrength) {
         // attacker wins
         winner = piece->getOwner();
         loser = opponent->getOwner();

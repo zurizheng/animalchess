@@ -53,7 +53,7 @@ bool Board::init(std::vector<std::string> layout, std::vector<Player>& players) 
             Player* player = &players[playerIndex];
             
             if (isGoal) {
-                isWall = true; // goals are also walls, make the goal be owned by the player who is trying to get to it
+                // make the goal be owned by the player who is trying to get to it
                 tileEffect = std::make_unique<GoalEffect>(&players[(playerIndex + 1) % 2]);
             }
             else if (isTrap) {
@@ -94,8 +94,6 @@ GamePiece* Board::makeGamePiece(int row, int col, char tileChar, std::vector<Pla
     if (tileChar < '1' && '8' > tileChar) return nullptr;
 
     int playerIndex = (row <= 6) ? 0 : 1;
-
-    std::cout << "[INFO] character is: " << tileChar << " allocated for player " << playerIndex + 1 << std::endl;
 
     Player& player = players[playerIndex];
 

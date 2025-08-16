@@ -47,8 +47,12 @@ bool GamePiece::isTrapped() {
     return trapped;
 }
 
+void GamePiece::setTrapped(bool state) {
+    trapped = state;
+}
+
 int GamePiece::getStrength() {
-    return strength;
+    return trapped ? 0 : strength;
 }
 
 char GamePiece::getPiece() {

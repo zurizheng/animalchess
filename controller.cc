@@ -95,7 +95,6 @@ bool Controller::nextTurn() {
     }
 
     if (gameOver()) {
-        announceWinner(currentPlayer);
         return false;
     }
 

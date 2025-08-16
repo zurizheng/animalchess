@@ -33,6 +33,7 @@ class GamePiece {
         
         bool isDead();
         bool isTrapped();
+        void setTrapped(bool state);
 
         int getStrength();
         char getPiece();
