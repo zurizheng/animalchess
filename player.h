@@ -12,10 +12,9 @@
 class Board;
 
 class Player {
-    int downloadedData;
-    int downloadedViruses;
     int index;
     bool isDeleted;
+    bool hasWon;
     std::vector<Tile*> trackedTiles;
     void removeOwnedTileEffects();
     void removePieces();
@@ -24,10 +23,10 @@ class Player {
         std::map<char, std::unique_ptr<GamePiece>> pieces;
         int getIndex() const;
         void addTrackedTiles(Tile* tile);
+        void setHasWon(bool value);
+        bool getHasWon() const;
         void deletePlayer();
         Constants::MOVE_RESULT move(Board* board, char pieceId, char dir);
-        bool isWinner() const;
-        bool isLoser() const;
         Player(int index, char startingPiece);
 };
 

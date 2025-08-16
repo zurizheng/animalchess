@@ -28,7 +28,7 @@ void GamePiece::setPosition(int row, int col) {
 }
 
 
-bool GamePiece::download(Player* player) {
+bool GamePiece::remove() {
     if (dead) {
         return false;
     }

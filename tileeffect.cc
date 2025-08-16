@@ -21,11 +21,11 @@ Player* TileEffect::getPlayer() {
 }
 
 
-bool TileEffect::isEndpoint() const {
+bool TileEffect::isGoal() const {
     return false; // Default to false
 }
 
-bool TileEffect::isServerPort() const {
+bool TileEffect::isTrap() const {
     return false; // Default to false
 }
 

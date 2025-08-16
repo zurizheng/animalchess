@@ -7,8 +7,8 @@
 
 
 Player::Player(int index, char startingPiece)
-    : index{index}, downloadedData{0}, downloadedViruses{0}, isDeleted{false} {
-    for (char c = startingPiece; c < startingPiece + Constants::NUM_LINKS; c++) {
+    : index{index}, isDeleted{false} {
+    for (char c = startingPiece; c < startingPiece + Constants::NUM_PIECES; c++) {
         pieces[c] = nullptr;
     }
 }
@@ -35,8 +35,16 @@ void Player::removeOwnedTileEffects() {
 
 void Player::removePieces() {
     for (auto& piece : pieces) {
-        piece.second.get()->download(nullptr);
+        piece.second.get()->remove();
     }
+}
+
+void Player::setHasWon(bool value) {
+    hasWon = value;
+}
+
+bool Player::getHasWon() const {
+    return hasWon;
 }
 
 void Player::deletePlayer() {
@@ -52,12 +60,4 @@ Constants::MOVE_RESULT Player::move(Board* board, char pieceId, char dir) {
     }
 
     return pieces[pieceId]->getMovementSystem()->move(*board, dir);
-}
-
-bool Player::isWinner() const {
-    return downloadedData >= 4;
-}
-
-bool Player::isLoser() const {
-    return downloadedViruses >= 4;
 }

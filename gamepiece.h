@@ -29,7 +29,7 @@ class GamePiece {
         int getCol();
         void setPosition(int row, int col);
 
-        bool download(Player* player);
+        bool remove();
         
         bool isDead();
         bool isTrapped();

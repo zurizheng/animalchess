@@ -1,15 +1,15 @@
 #include "textview.h"
 #include "player.h"
 #include "tile.h"
-#include "serverporteffect.h"
+#include "goaleffect.h"
 
 #include <iostream>
 #include <memory>
 #include <vector>
 
 
-TextView::TextView(int length, const std::vector<Player>& players) : View{players} {
-    grid = std::vector<std::vector<char>>(length, std::vector<char>(length));
+TextView::TextView(int length, int width, const std::vector<Player>& players) : View{players} {
+    grid = std::vector<std::vector<char>>(length, std::vector<char>(width));
 }
 
 
@@ -29,7 +29,7 @@ void TextView::notify(const Tile& tile) {
     }
     else if (tileEffect) {
         // type checking
-        if (auto* s = dynamic_cast<ServerPortEffect*>(tileEffect)) {
+        if (auto* s = dynamic_cast<GoalEffect*>(tileEffect)) {
             if (players.size() > 2) {
                 grid[row][col] = '$';
             } else {
@@ -48,6 +48,7 @@ void TextView::notify(const Tile& tile) {
 void TextView::printPlayerInfo(std::ostream& out, int playerIndex, bool show) {
     int inc = 0;
     out << "Player " << players[playerIndex].getIndex() + 1 << (show ? ": <- Active Player" : ":") << std::endl;
+    out << "Piece Size: " << players[playerIndex].pieces.size() << std::endl;
     for (auto& piece : players[playerIndex].pieces) {
         out << piece.first << ": " << piece.second->getPiece() << piece.second->getStrength();
         // newline after half of the entries
@@ -66,7 +67,7 @@ void TextView::print(std::ostream& out, int playerIndex, bool POV) {
         printPlayerInfo(out, i, i == playerIndex);
     }
 
-    for (int i = 0; i < grid.size() - 2; i++) {
+    for (int i = 0; i < grid[0].size(); i++) {
         out << "=";
     }
     out << std::endl;
@@ -74,7 +75,7 @@ void TextView::print(std::ostream& out, int playerIndex, bool POV) {
     // The grid
     printGrid(out, playerIndex, POV);
 
-    for (int i = 0; i < grid.size() - 2; i++) {
+    for (int i = 0; i < grid[0].size(); i++) {
         out << "=";
     }
     out << std::endl;
@@ -88,6 +89,7 @@ void TextView::print(std::ostream& out, int playerIndex, bool POV) {
 
 void TextView::printGrid(std::ostream& out, int playerIndex, bool POV) {
     for (int row = 1; row < grid.size()-1; row++) {
+        out << "|";
         for (int col = 1; col < grid[0].size()-1; col++) {
             int tempRow = row;
             int tempCol = col;
@@ -96,6 +98,7 @@ void TextView::printGrid(std::ostream& out, int playerIndex, bool POV) {
             }
             out << grid[tempRow][tempCol];
         }
+        out << "|";
         out << '\n';
     }
 }

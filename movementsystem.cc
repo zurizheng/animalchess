@@ -24,28 +24,23 @@ Constants::MOVE_RESULT MovementSystem::move(Board& board, char dir) {
     
     TileEffect* effect = newTile->getTileEffect();
 
-    // Check if moving into our own endpoint
-    // Need to do this before wall check bc endpoints are walls, but we move into them
-    // if it's our own endpoint
-    if (effect && effect->isEndpoint()) {
+    // Check if moving into opponents goal which the player owns
+    // Need to do this before wall check bc goals are walls, but we move into them
+    // if it's our own goal
+    if (effect && effect->isGoal()) {
         if (effect->getPlayer() == owner) {
             effect->onEnter(piece);
-            if (piece->isDead()) {
-                return Constants::MOVE_DOWNLOADED;
-            }
-            else { // Shouldn't ever happen
-                std::cout << "DEBUG: shouldn't be here #1336984497272"  << std::endl;
-            }
+            std::cout << "[INFO] Player " << effect->getPlayer()->getIndex() + 1 << " has reached their goal!" << std::endl;
         }
     }
 
-    // Check if moving into a wall (or opponents endpoint)
+    // Check if moving into a wall (or own goal)
     if (newTile->getIsWall()) {
         return Constants::MOVE_WALL;
     }
 
-    // Can't move into own server pot
-    if (effect && effect->isServerPort()) {
+    // Can't move into own trap
+    if (effect && effect->isTrap()) {
         if (effect->getPlayer() == owner) {
             return Constants::MOVE_WALL;
         }
@@ -56,21 +51,21 @@ Constants::MOVE_RESULT MovementSystem::move(Board& board, char dir) {
 
     // Check if moving onto one of our own pieces
     if (otherPiece && otherPiece != piece && otherOwner == owner) {
-        return Constants::MOVE_OWNLINK;
+        return Constants::MOVE_OWNPIECE;
     }
 
     // Call any onEnter effects (before battle)
     if (effect) {
         effect->onEnter(piece);
         if (piece->isDead()) {
-            return Constants::MOVE_DOWNLOADED;
+            return Constants::MOVE_KILLED;
         }
     }
 
     if (otherPiece && otherOwner != owner) {
         battle(otherPiece);
         if (piece->isDead()) {
-            return Constants::MOVE_DOWNLOADED;
+            return Constants::MOVE_KILLED;
         }
     }
 
@@ -134,10 +129,10 @@ bool MovementSystem::battle(GamePiece* opponent) {
         winningGamePiece = opponent;
     }
 
-    // Winner downloads the defeated piece
+    // Winner remains on board
     std::cout << "[INFO] Player " << winner->getIndex() + 1 << " wins battle vs Player " << loser->getIndex() + 1 << std::endl;
 
-    defeatedGamePiece->download(winner);
+    defeatedGamePiece->remove();
 
     // Notify board of winner (bc. it's revealed, shows in graphics)
     winningGamePiece->getBoard()->notify(

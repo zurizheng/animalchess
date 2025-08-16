@@ -2,8 +2,8 @@
 
 #include "constants.h"
 #include "player.h"
-#include "serverporteffect.h"
-#include "endpointeffect.h"
+#include "trapeffect.h"
+#include "goaleffect.h"
 #include "tile.h"
 #include "window.h"
 
@@ -95,53 +95,37 @@ void GraphicalView::drawTile(int x, int y, int width, int height, const TileInfo
     long effectInfoColor = 0;
     std::string text = "";
 
-    if (tileInfo.isEndpoint) {
+    if (tileInfo.isTrap) {
         backgroundColor = window.getColor(15, 0, 74); // endpoint shouldn't ever be shown #0f004a
     }
     else if (tileInfo.isWall) {
         backgroundColor = window.getColor(43, 43, 43); // dark grey #2b2b2b
     }
-    else if (tileInfo.isServerPort) {
+    else if (tileInfo.isGoal) {
         std::vector<int> serverPortColor = serverPortColors[tileInfo.effectOwner];
         backgroundColor = window.getColor(serverPortColor[0], serverPortColor[1], serverPortColor[2]);
         text = "$";
     }
-    else if (tileInfo.isFirewall) {
-        backgroundColor = window.getColor(237, 59, 0); // red #ed3b00
-        if (tileInfo.effectOwner == 0) text = "m";
-        else if (tileInfo.effectOwner == 1) text = "w";
-        else if (tileInfo.effectOwner == 2) text = "M";
-        else if (tileInfo.effectOwner == 3) text = "W";
-    }
-    else if (tileInfo.isSlime) {
-        backgroundColor = window.getColor(78, 102, 11); // murky green #4e660b
-        text = "~";        
+    else if (tileInfo.isWater) {
+        backgroundColor = window.getColor(13, 219, 222); // light blue #0ddbdeff
+        text = "W";
     }
 
-    if (tileInfo.hasTileEffect && !tileInfo.isServerPort) {
+    if (tileInfo.hasTileEffect && !tileInfo.isGoal) {
         std::vector<int> playerColor = playerColors[tileInfo.effectOwner];
         effectInfoColor = window.getColor(playerColor[0], playerColor[1], playerColor[2]);
     }
 
-    if (tileInfo.hasLink) {
-        std::vector<int> playerColor = playerColors[tileInfo.linkOwner];
+    if (tileInfo.hasGamePiece) {
+        std::vector<int> playerColor = playerColors[tileInfo.pieceOwner];
         linkColor = window.getColor(playerColor[0], playerColor[1], playerColor[2]);
         
         text = tileInfo.piece;
         
-        int linkOwner = tileInfo.linkOwner;
+        int linkOwner = tileInfo.pieceOwner;
         bool reveal = (screenIndex == -1) ? (linkOwner == currentPlayer) : (linkOwner == screenIndex);
 
-        if (tileInfo.revealed || reveal) {
-            text += " " + std::to_string(tileInfo.strength);
-
-            if (tileInfo.isVirus) {
-                linkTypeColor = window.getColor(255, 0, 0); // red #ff0000
-            } else {
-                linkTypeColor = window.getColor(0, 255, 0); // green #00ff00
-            }
-        }
-
+        text += " " + std::to_string(tileInfo.strength);
     }
 
     // Background with gaps to have small tile borders
@@ -274,12 +258,13 @@ void GraphicalView::updateGrid(const Tile& tile) {
 
     tileInfo.initialized = true;
     tileInfo.isWall = tile.getIsWall();
-    tileInfo.hasLink = (piece != nullptr);
+    tileInfo.isWater = tile.getIsWater();
+    tileInfo.hasGamePiece = (piece != nullptr);
 
     if (piece) {
         tileInfo.piece = piece->getPiece();
         tileInfo.strength = piece->getStrength();
-        tileInfo.linkOwner = piece->getOwner()->getIndex();
+        tileInfo.pieceOwner = piece->getOwner()->getIndex();
     }
 
     tileInfo.hasTileEffect = (tileEffect != nullptr);
@@ -287,15 +272,13 @@ void GraphicalView::updateGrid(const Tile& tile) {
     if (tileEffect) {
         tileInfo.effectOwner = tileEffect->getPlayer()->getIndex();
         
-        tileInfo.isServerPort = dynamic_cast<ServerPortEffect*>(tileEffect) != nullptr;
-        tileInfo.isEndpoint = dynamic_cast<EndpointEffect*>(tileEffect) != nullptr;
+        tileInfo.isTrap = dynamic_cast<TrapEffect*>(tileEffect) != nullptr;
+        tileInfo.isGoal = dynamic_cast<GoalEffect*>(tileEffect) != nullptr;
     } else {
         tileInfo.effectOwner = -1;
         
-        tileInfo.isServerPort = false;
-        tileInfo.isFirewall = false;
-        tileInfo.isSlime = false;
-        tileInfo.isEndpoint = false;
+        tileInfo.isTrap = false;
+        tileInfo.isGoal = false;
     }
 }
 

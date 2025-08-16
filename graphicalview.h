@@ -10,17 +10,14 @@
 struct TileInfo {
     bool initialized = false;
     bool isWall;
-    bool hasLink;
-    int linkOwner;
+    bool hasGamePiece;
+    int pieceOwner;
     char piece;
-    bool isVirus;
     int strength;
-    bool revealed;
     bool hasTileEffect;
-    bool isServerPort;
-    bool isFirewall;
-    bool isSlime;
-    bool isEndpoint;
+    bool isGoal;
+    bool isTrap;
+    bool isWater;
     int effectOwner;
 };
 

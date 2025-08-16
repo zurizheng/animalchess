@@ -22,7 +22,6 @@ class Controller {
     bool useGraphics;
     bool viewPerPlayer;
     bool POVEnabled;
-    bool setupCLI;
 
     std::stack<std::unique_ptr<std::istream>> inputStack;
 
@@ -38,11 +37,9 @@ class Controller {
         void play();
         Controller(
             int numPlayers,
-            std::vector<std::vector<std::pair<bool, int>>> playerPlacements,
             bool useGraphics,
             bool viewPerPlayer,
-            bool POVEnabled,
-            bool setupCLI
+            bool POVEnabled
         );
 
         void notify(const Tile& tile);

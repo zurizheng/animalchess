@@ -17,13 +17,11 @@ class Board {
 
     // Helper function to get which player index a char belongs to 
     int getPlayer(char t);
-    GamePiece* makeGamePiece(int row, int col, char tileChar, std::vector<Player>& players, 
-                   std::vector<std::vector<std::pair<bool, int>>>& playerPlacements);
+    GamePiece* makeGamePiece(int row, int col, char tileChar, std::vector<Player>& players);
 
 
     public:
-        bool init(std::vector<std::string> layout, std::vector<Player>& players,
-                  std::vector<std::vector<std::pair<bool, int>>>& playerPlacements);
+        bool init(std::vector<std::string> layout, std::vector<Player>& players);
         Tile* getTile(int row, int col);
         int getSize();
         void notify(const Tile& tile);

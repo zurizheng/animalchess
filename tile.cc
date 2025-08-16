@@ -7,14 +7,16 @@
 
 
 Tile::Tile(int row, int col, 
-           GamePiece* piece, 
-           std::unique_ptr<TileEffect> effect, 
-           bool isWall, 
-           Board* board)
+            GamePiece* piece, 
+            std::unique_ptr<TileEffect> effect, 
+            bool isWall,
+            bool isWater,
+            Board* board)
     : row{row}, col{col}, 
       piece{piece}, 
       effect{std::move(effect)}, 
-      isWall{isWall}, 
+      isWall{isWall},
+      isWater{isWater},
       board{board} {}
 
 int Tile::getRow() const {
@@ -35,6 +37,10 @@ void Tile::setPiece(GamePiece* piece) {
 
 bool Tile::getIsWall() const {
     return isWall;
+}
+
+bool Tile::getIsWater() const {
+    return isWater;
 }
 
 TileEffect* Tile::getTileEffect() const {

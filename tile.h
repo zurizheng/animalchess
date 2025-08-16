@@ -13,6 +13,7 @@ class Tile {
     GamePiece* piece;
     Board* board;
     bool isWall;
+    bool isWater;
     std::unique_ptr<TileEffect> effect;
     
     public:
@@ -20,6 +21,7 @@ class Tile {
             GamePiece* piece, 
             std::unique_ptr<TileEffect> effect,
             bool isWall,
+            bool isWater,
             Board* board);
 
 
@@ -29,6 +31,7 @@ class Tile {
         TileEffect* getTileEffect() const;
         void setTileEffect(std::unique_ptr<TileEffect> effect);
         bool getIsWall() const;
+        bool getIsWater() const;
         int getRow() const;
         int getColumn() const;
         void notify() const;

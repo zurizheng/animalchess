@@ -16,8 +16,8 @@ class TileEffect {
         virtual void onLeave(GamePiece* piece);
         Player* getPlayer();
 
-        virtual bool isEndpoint() const;
-        virtual bool isServerPort() const;
+        virtual bool isTrap() const;
+        virtual bool isGoal() const;
 };
 
 #endif

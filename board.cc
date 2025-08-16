@@ -3,9 +3,9 @@
 #include "gamepiece.h"
 #include "constants.h"
 #include "controller.h"
-#include "endpointeffect.h"
+#include "trapeffect.h"
 #include "player.h"
-#include "serverporteffect.h"
+#include "goaleffect.h"
 #include "tile.h"
 #include "tileeffect.h"
 
@@ -23,8 +23,7 @@
 Board::Board(int size, Controller* controller) : size{size}, controller{controller} {}
 
 
-bool Board::init(std::vector<std::string> layout, std::vector<Player>& players, 
-                 std::vector<std::vector<std::pair<bool, int>>>& playerPlacements) {
+bool Board::init(std::vector<std::string> layout, std::vector<Player>& players) {
     // Avoid resizes to prevent reallocations
     size_t height = layout.size();
 
@@ -36,9 +35,6 @@ bool Board::init(std::vector<std::string> layout, std::vector<Player>& players,
     for (int r = 0; r < height; r++) {
         size_t width = layout[r].size();
 
-        // Board must be square
-        assert(width == height);
-
         // Avoid reallocations
         board.emplace_back();
         board[r].reserve(width);
@@ -46,28 +42,30 @@ bool Board::init(std::vector<std::string> layout, std::vector<Player>& players,
         for (int c = 0; c < width; c++) {
             char tileChar = layout[r][c];
             
-            bool isWall = (tileChar == 'X');
+            bool isWall =  (tileChar == 'X');
+            bool isWater = (tileChar == 'W');
+            bool isTrap =  (tileChar == 'T');
+            bool isGoal =  (tileChar == 'G');
 
-            bool isEndpoint = false;
             std::unique_ptr<TileEffect> tileEffect = nullptr;
             
-            // Set endpoint / server ports (indicated by numbers in layout)
-            // Endpoints are on the edges of the board, otherwise server ports
-            if (std::isdigit(tileChar)) {
-                int playerIndex = tileChar - '0';
-                Player* player = &players[playerIndex];
-                bool isOnEdge = (r == 0 || r == (height - 1) || c == 0 || c == (width - 1));
-                isEndpoint = isOnEdge;
-                if (isEndpoint) {
-                    isWall = true; // endpoints are also walls
-                    tileEffect = std::make_unique<EndpointEffect>(player);
-                }
-                else {
-                    tileEffect = std::make_unique<ServerPortEffect>(player);
-                }
+            int playerIndex = (r <= 6) ? 0 : 1;
+            Player* player = &players[playerIndex];
+            
+            if (isGoal) {
+                isWall = true; // goals are also walls, make the goal be owned by the player who is trying to get to it
+                tileEffect = std::make_unique<GoalEffect>(&players[(playerIndex + 1) % 2]);
             }
-
-            GamePiece* piece = makeGamePiece(r, c, tileChar, players, playerPlacements);
+            else if (isTrap) {
+                tileEffect = std::make_unique<TrapEffect>(player);
+            }
+            
+            GamePiece* piece = nullptr;
+            
+            // check if integer
+            if (std::isdigit(tileChar)) {
+                piece = makeGamePiece(r, c, tileChar, players);
+            }
 
             // Create Tile object
             board[r].emplace_back(
@@ -75,6 +73,7 @@ bool Board::init(std::vector<std::string> layout, std::vector<Player>& players,
                 piece,
                 std::move(tileEffect),
                 isWall,
+                isWater,
                 this
             );
 
@@ -91,46 +90,17 @@ bool Board::init(std::vector<std::string> layout, std::vector<Player>& players,
     return true;
 }
 
+GamePiece* Board::makeGamePiece(int row, int col, char tileChar, std::vector<Player>& players) {
+    if (tileChar < '1' && '8' > tileChar) return nullptr;
 
-int Board::getPlayer(char t) {
-    if (!std::isalpha(t)) {
-        return -1;
-    }
+    int playerIndex = (row <= 6) ? 0 : 1;
 
-    const int NUM_PLAYERS = 4;
+    std::cout << "[INFO] character is: " << tileChar << " allocated for player " << playerIndex + 1 << std::endl;
 
-    // Get player index based on if it's within the range of starting pieces for each player
-    for (int i = 0; i < NUM_PLAYERS; i++) {
-        if (Constants::PLAYER_STARTING_PIECES[i] <= t && 
-            t < Constants::PLAYER_STARTING_PIECES[i] + Constants::NUM_LINKS) {
-            return i;
-        }
-    }
-
-    // Not a valid player character
-    return -1; 
-}
-
-
-GamePiece* Board::makeGamePiece(int row, int col, char tileChar, std::vector<Player>& players, 
-                   std::vector<std::vector<std::pair<bool, int>>>& playerPlacements) {
-    int playerIndex = getPlayer(tileChar);
-    if (playerIndex < 0 || playerIndex >= players.size()) {
-        return nullptr; // Invalid player index
-    }
-
-
-    int linkIndex = tileChar - Constants::PLAYER_STARTING_PIECES[playerIndex];
     Player& player = players[playerIndex];
 
-    std::vector<std::pair<bool, int>>& placements = playerPlacements[playerIndex];
-    std::pair<bool, int> placement = placements[linkIndex];
-
-    bool isVirus = placement.first;
-    int strength = placement.second;
-
     player.pieces[tileChar] = std::make_unique<GamePiece>(
-        tileChar, row, col, strength, &player, this
+        tileChar, row, col, tileChar - '0', &player, this
     );
 
     return player.pieces[tileChar].get();

@@ -20,12 +20,10 @@
 
 Controller::Controller(
     int numPlayers,
-    std::vector<std::vector<std::pair<bool, int>>> playerPlacements,
     bool useGraphics,
     bool viewPerPlayer,
-    bool POVEnabled,
-    bool setupCLI
-) : currentPlayer{0}, useGraphics{useGraphics}, viewPerPlayer{viewPerPlayer}, POVEnabled{POVEnabled}, setupCLI{setupCLI} 
+    bool POVEnabled
+) : currentPlayer{0}, useGraphics{useGraphics}, viewPerPlayer{viewPerPlayer}, POVEnabled{POVEnabled}
 {
     // Set up initial input stack (default to cin)
     inputStack.push(std::make_unique<std::istream>(std::cin.rdbuf()));
@@ -37,10 +35,12 @@ Controller::Controller(
         players.emplace_back(i, Constants::PLAYER_STARTING_PIECES[i]);
     }
 
-    int boardSize = (numPlayers == 2) ? Constants::BOARD_SIZE_2_PLAYER : Constants::BOARD_SIZE_4_PLAYER;
+    int boardSize = Constants::BOARD_SIZE_2_PLAYER;
+    int boardWidth = Constants::BOARD_WIDTH_2_PLAYER;
+
 
     // Initialize text and optionally graphical views
-    tv = std::make_unique<TextView>(boardSize, players);
+    tv = std::make_unique<TextView>(boardSize, boardWidth, players);
     if (useGraphics) {
         if (viewPerPlayer) {
             for (int i = 0; i < numPlayers; i++) {
@@ -68,7 +68,7 @@ Controller::Controller(
 
     // Initialize the board with specified layout, makes links and tiles
     board = std::make_unique<Board>(boardSize, this);
-    bool initSuccess = board->init(layout, players, playerPlacements);
+    bool initSuccess = board->init(layout, players);
 
     // Board must be initialized successfully
     assert(initSuccess);
@@ -95,6 +95,7 @@ bool Controller::nextTurn() {
     }
 
     if (gameOver()) {
+        announceWinner(currentPlayer);
         return false;
     }
 
@@ -117,14 +118,6 @@ bool Controller::nextTurn() {
             graphicalViews[i]->redrawPlayers();
             graphicalViews[i]->drawWholeBoard();
         }
-    }
-
-    // Skip over players who have lost
-    if (players[currentPlayer].isLoser()) {
-        // std::cout << "DEBUG: Player " << currentPlayer + 1 << " has lost, skipping turn." << std::endl;
-        players[currentPlayer].deletePlayer();
-        if(useGraphics) graphicalViews[currentPlayer] = nullptr;
-        nextTurn();
     }
 
     return true;
@@ -232,7 +225,7 @@ void Controller::play() {
 
             Constants::MOVE_RESULT result = players[currentPlayer].move(board.get(), pieceName, cardinalDir);
 
-            if (result == Constants::MOVE_SUCCESS || result == Constants::MOVE_DOWNLOADED) {
+            if (result == Constants::MOVE_SUCCESS || result == Constants::MOVE_KILLED) {
                 tv->print(std::cout, currentPlayer, POVEnabled);
                 bool result = nextTurn();
                 if (!result) return;
@@ -241,13 +234,13 @@ void Controller::play() {
 
             std::cout << "[INVALID] Cannot move link '" << pieceName << "' " << direction << ": ";
             if (result == Constants::MOVE_INVALID) {
-                std::cout << "invalid input (link may be downloaded)" << std::endl;
+                std::cout << "invalid input (link may be dead)" << std::endl;
             }
             else if (result == Constants::MOVE_WALL) {
                 std::cout << "cannot move into a wall" << std::endl;
             }
-            else if (result == Constants::MOVE_OWNLINK) {
-                std::cout << "cannot move into own link" << std::endl;
+            else if (result == Constants::MOVE_OWNPIECE) {
+                std::cout << "cannot move into own piece" << std::endl;
             }
             continue;
         }
@@ -256,35 +249,12 @@ void Controller::play() {
 }
 
 bool Controller::gameOver() {
-    int numPlayers = players.size();
-    int numLosers = 0;
-    int lastPlayer = -1;
-
-    for (Player& player : players) {
-        if (player.isWinner()) {
-            announceWinner(player.getIndex());
+    for (int i = 0; i < players.size(); i++) {
+        if (players[i].getHasWon()) {
+            announceWinner(players[i].getIndex());
             return true;
         }
-        if (player.isLoser()) {
-            player.deletePlayer();
-            numLosers++;
-        } else {
-            lastPlayer = player.getIndex();
-        }
     }
-
-    if (numLosers == numPlayers - 1) {
-        announceWinner(lastPlayer);
-
-        return true;
-    }
-
-    if (numLosers >= numPlayers) {
-        // All players have lost, no one wins
-        std::cout << "[ERROR] All players have lost, no winner (SHOULD NOT HAPPEN)." << std::endl;
-        return true;
-    }
-
     return false;
 }
 
