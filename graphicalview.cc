@@ -18,11 +18,11 @@
 #define TILE_SIZE 50
 
 
-GraphicalView::GraphicalView(int boardSize, int screenIndex, const std::vector<Player>& players, bool POVEnabled) :
+GraphicalView::GraphicalView(int boardLength, int boardWidth, int screenIndex, const std::vector<Player>& players, bool POVEnabled) :
     View{ players },
     displayReady{ false }, screenIndex{ screenIndex }, POVEnabled{POVEnabled},
     numPlayers{ 2 },
-    boardDimension{ (boardSize - 2) * TILE_SIZE }, // -2 for walls
+    boardDimension{ (boardLength - 2) * TILE_SIZE }, // -2 for walls
     playerInfoHeight{ LINE_HEIGHT * 5 },
     playerInfoWidth{ boardDimension },
     boardX{ SPACING },
@@ -57,7 +57,7 @@ GraphicalView::GraphicalView(int boardSize, int screenIndex, const std::vector<P
         {255, 244, 209} // lighter mustard yellow #fff4d1
     };
 
-    grid = std::vector<std::vector<TileInfo>>(boardSize, std::vector<TileInfo>(boardSize));
+    grid = std::vector<std::vector<TileInfo>>(boardLength, std::vector<TileInfo>(boardWidth));
 
     if (screenIndex != -1) {
         window.drawString(

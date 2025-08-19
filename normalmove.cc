@@ -1,5 +1,4 @@
 #include "normalmove.h"
-
 #include "board.h"
 #include "constants.h"
 #include "gamepiece.h"
@@ -7,15 +6,13 @@
 #include "tile.h"
 #include "tileeffect.h"
 
-#include <cctype>
-
 
 NormalMove::NormalMove(GamePiece* piece) : MovementSystem(piece) {}
 
 
 bool NormalMove::shouldStop(Board& board, int row, int col) {
     Tile* tile = board.getTile(row, col);
-    return tile->getIsWall();
+    return tile->getIsWall() || tile->getIsWater();
 }
 
 

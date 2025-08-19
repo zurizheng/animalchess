@@ -17,7 +17,9 @@ namespace Constants {
         MOVE_INVALID,
         MOVE_WALL,
         MOVE_OWNPIECE,
-        MOVE_KILLED
+        MOVE_KILLED,
+        MOVE_RAT_INVALID,
+        MOVE_WATER_INVALID
     };
 }
 

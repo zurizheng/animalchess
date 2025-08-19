@@ -17,6 +17,7 @@ class GamePiece {
     int strength;
     bool dead;
     bool trapped;
+    bool inWater;
 
     Player* owner;
     Board* board;
@@ -32,6 +33,8 @@ class GamePiece {
         bool remove();
         
         bool isDead();
+        bool isInWater();
+        void setInWater(bool state);
         bool isTrapped();
         void setTrapped(bool state);
 

@@ -20,15 +20,17 @@
 #include <utility>
 
 
-Board::Board(int size, Controller* controller) : size{size}, controller{controller} {}
+Board::Board(int length, int width, Controller* controller) : length{length}, width{width}, controller{controller} {}
 
 
 bool Board::init(std::vector<std::string> layout, std::vector<Player>& players) {
     // Avoid resizes to prevent reallocations
     size_t height = layout.size();
+    size_t givenWidth = layout[0].size();
 
     // Board layout must match specified size
-    assert(height == size);
+    assert(height == length);
+    assert(width == givenWidth);
 
     board.reserve(height);
 
@@ -111,14 +113,16 @@ void Board::notify(const Tile& tile) {
 
 
 Tile* Board::getTile(int row, int col) {
-    if (row < 0 || row >= size || col < 0 || col >= size) {
+    if (row < 0 || row >= length || col < 0 || col >= width) {
         return nullptr; // Out of bounds
     }
     return &board[row][col];
 }
 
-int Board::getSize() {
-    return size;
+int Board::getLength() {
+    return length;
 }
 
-
+int Board::getWidth() {
+    return width;
+}

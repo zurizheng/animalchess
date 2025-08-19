@@ -56,7 +56,7 @@ class GraphicalView : public View {
     
 
     public:
-        GraphicalView(int boardSize, int screenIndex, const std::vector<Player>& players, bool povEnabled);
+        GraphicalView(int boardLength, int boardWidth, int screenIndex, const std::vector<Player>& players, bool povEnabled);
         void notify(const Tile& tile) override;
         void print(std::ostream& out, int playerIndex, bool POV = false) override;
         void printWhoWon(std::ostream& out, int playerIndex) override;

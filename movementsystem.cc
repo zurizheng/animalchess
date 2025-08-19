@@ -1,5 +1,5 @@
 #include "movementsystem.h"
-
+#include "watermove.h"
 #include "board.h"
 #include "constants.h"
 #include "player.h"
@@ -60,6 +60,17 @@ Constants::MOVE_RESULT MovementSystem::move(Board& board, char dir) {
         if (piece->isDead()) {
             return Constants::MOVE_KILLED;
         }
+    }
+
+
+    if (newTile->getIsWater() && !(dynamic_cast<WaterMove*>(piece->getMovementSystem()))) {
+        return Constants::MOVE_WATER_INVALID;
+    }
+
+    // check mouse condition, if one of them is in water, but not both
+    // and one of the pieces is mouse
+    if (otherPiece && (currentTile->getIsWater() ^ newTile->getIsWater()) && (piece->getStrength() == 1 || otherPiece->getStrength() == 1)) {
+        return Constants::MOVE_RAT_INVALID;
     }
 
     if (otherPiece && otherOwner != owner) {

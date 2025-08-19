@@ -35,23 +35,23 @@ Controller::Controller(
         players.emplace_back(i, Constants::PLAYER_STARTING_PIECES[i]);
     }
 
-    int boardSize = Constants::BOARD_SIZE_2_PLAYER;
+    int boardLength = Constants::BOARD_SIZE_2_PLAYER;
     int boardWidth = Constants::BOARD_WIDTH_2_PLAYER;
 
 
     // Initialize text and optionally graphical views
-    tv = std::make_unique<TextView>(boardSize, boardWidth, players);
+    tv = std::make_unique<TextView>(boardLength, boardWidth, players);
     if (useGraphics) {
         if (viewPerPlayer) {
             for (int i = 0; i < numPlayers; i++) {
                 graphicalViews.push_back(
-                    std::make_unique<GraphicalView>(boardSize, i, players, POVEnabled)
+                    std::make_unique<GraphicalView>(boardLength, boardWidth, i, players, POVEnabled)
                 );
             }
         }
         else {
             graphicalViews.push_back(
-                std::make_unique<GraphicalView>(boardSize, -1, players, POVEnabled)
+                std::make_unique<GraphicalView>(boardLength, boardWidth, -1, players, POVEnabled)
             );
         }
     }
@@ -67,7 +67,7 @@ Controller::Controller(
     }
 
     // Initialize the board with specified layout, makes links and tiles
-    board = std::make_unique<Board>(boardSize, this);
+    board = std::make_unique<Board>(boardLength, boardWidth, this);
     bool initSuccess = board->init(layout, players);
 
     // Board must be initialized successfully
@@ -241,6 +241,11 @@ void Controller::play() {
             else if (result == Constants::MOVE_OWNPIECE) {
                 std::cout << "cannot move into own piece" << std::endl;
             }
+            else if (result == Constants::MOVE_RAT_INVALID) {
+                std::cout << "rat cannot move into land/water and battle" << std::endl;
+            } else if (result == Constants::MOVE_WATER_INVALID) {
+                std::cout << "invalid water move" << std::endl;
+            }
             continue;
         }
 
@@ -285,14 +290,14 @@ void Controller::notify(const Tile& tile) {
 
 void Controller::convertCoordinatesPOV(int& row, int& col, int POVindex) {
     if (POVindex == 0) {
-        row = board->getSize() - row - 1;
-        col = board->getSize() - col - 1;
+        row = board->getLength() - row - 1;
+        col = board->getWidth() - col - 1;
     } else if (POVindex == 2) {
         std::swap(row, col);
-        row = board->getSize() - row - 1;
+        row = board->getLength() - row - 1;
     } else if (POVindex == 3) {
         std::swap(row, col);
-        col = board->getSize() - col - 1;
+        col = board->getWidth() - col - 1;
     }
 }
 

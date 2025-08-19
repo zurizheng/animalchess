@@ -3,6 +3,8 @@
 #include "link.h"
 #include "movementsystem.h"
 #include "normalmove.h"
+#include "watermove.h"
+#include "leapmove.h"
 #include "player.h"
 
 #include <memory>
@@ -10,7 +12,15 @@
 
 GamePiece::GamePiece(char piece, int row, int col, int strength, Player* owner, Board* board)
     : piece{piece}, row{row}, col{col}, strength{strength}, dead{false}, trapped{false}, owner{owner}, board{board} { // default values
-    movementSystem = std::make_unique<NormalMove>(this);
+    if (strength == 1) {
+        // rat case
+        movementSystem = std::make_unique<WaterMove>(this);
+    } else if (strength == 6 || strength == 7) {
+        // tiger and lion case
+        movementSystem = std::make_unique<LeapMove>(this);
+    } else {
+        movementSystem = std::make_unique<NormalMove>(this);
+    }
 }
 
 
@@ -45,6 +55,14 @@ bool GamePiece::isDead() {
 
 bool GamePiece::isTrapped() {
     return trapped;
+}
+
+bool GamePiece::isInWater() {
+    return inWater;
+}
+
+void GamePiece::setInWater(bool state) {
+    inWater = state;
 }
 
 void GamePiece::setTrapped(bool state) {

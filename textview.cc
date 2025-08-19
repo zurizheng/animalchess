@@ -24,11 +24,11 @@ void TextView::notify(const Tile& tile) {
     if (tile.getIsWall()) {
         grid[row][col] = 'X';
     }
-    else if (tile.getIsWater()) {
-        grid[row][col] = 'W';
-    }
     else if (piece) {
         grid[row][col] = piece->getPiece();
+    }
+    else if (tile.getIsWater()) {
+        grid[row][col] = 'W';
     }
     else if (tileEffect) {
         // type checking
@@ -52,7 +52,7 @@ void TextView::printPlayerInfo(std::ostream& out, int playerIndex, bool show) {
     int inc = 0;
     out << "Player " << players[playerIndex].getIndex() + 1 << (show ? ": <- Active Player" : ":") << std::endl;
     for (auto& piece : players[playerIndex].pieces) {
-        out << piece.first << ": " << piece.second->getPiece() << piece.second->getStrength();
+        out << piece.first << ": " << (piece.second->isDead() ? "Dead" : "Alive");
         // newline after half of the entries
         if (++inc == players[playerIndex].pieces.size()/2) {
             out << std::endl;
