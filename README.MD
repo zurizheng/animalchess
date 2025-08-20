@@ -4,7 +4,6 @@ A strategy board game with AI opponents powered by deep reinforcement learning.
 
 ![C++14](https://img.shields.io/badge/C%2B%2B-14-blue)
 ![AI](https://img.shields.io/badge/AI-Deep%20Q--Network-green)
-![Build](https://img.shields.io/badge/build-passing-brightgreen)
 
 ## About
 
