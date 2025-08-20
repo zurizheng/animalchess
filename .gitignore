@@ -3,3 +3,5 @@
 animalchess
 *.zip
 .vscode
+*.model
+aitrain

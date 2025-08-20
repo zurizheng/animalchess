@@ -3,6 +3,7 @@
 #include "board.h"
 #include "constants.h"
 #include "player.h"
+#include "../ai/aiplayer.h"
 #include "view.h"
 #include "graphicalview.h"
 #include "textview.h"
@@ -22,8 +23,9 @@ Controller::Controller(
     int numPlayers,
     bool useGraphics,
     bool viewPerPlayer,
-    bool POVEnabled
-) : currentPlayer{0}, useGraphics{useGraphics}, viewPerPlayer{viewPerPlayer}, POVEnabled{POVEnabled}
+    bool POVEnabled,
+    bool aiTraining
+) : currentPlayer{0}, useGraphics{useGraphics}, viewPerPlayer{viewPerPlayer}, POVEnabled{POVEnabled}, aiTraining{aiTraining}
 {
     // Set up initial input stack (default to cin)
     inputStack.push(std::make_unique<std::istream>(std::cin.rdbuf()));
@@ -127,6 +129,13 @@ void Controller::play() {
     while (!inputStack.empty()) {
         if (gameOver()) {
             break;
+        }
+
+        // Check if current player is AI
+        if (isAIPlayer(currentPlayer)) {
+            handleAITurn();
+            if (!nextTurn()) break;
+            continue;
         }
 
         // Input prompt for current player
@@ -301,3 +310,127 @@ void Controller::convertCoordinatesPOV(int& row, int& col, int POVindex) {
     }
 }
 
+void Controller::setAIPlayer(int playerIndex, double learningRate) {
+    if (playerIndex >= 0 && playerIndex < players.size()) {
+        // Ensure we have enough AI player slots
+        while (aiPlayers.size() <= playerIndex) {
+            aiPlayers.push_back(nullptr);
+        }
+        
+        // Create AI player with same starting piece as regular player
+        char startingPiece = Constants::PLAYER_STARTING_PIECES[playerIndex];
+        aiPlayers[playerIndex] = std::make_unique<AIPlayer>(playerIndex, startingPiece, learningRate);
+        
+        std::cout << "Player " << (playerIndex + 1) << " set as AI" << std::endl;
+    }
+}
+
+bool Controller::isAIPlayer(int playerIndex) const {
+    return playerIndex < aiPlayers.size() && aiPlayers[playerIndex] != nullptr;
+}
+
+bool Controller::handleAITurn() {
+    if (!isAIPlayer(currentPlayer)) {
+        return false;  // Not an AI player
+    }
+    
+    // Get AI move
+    auto move = aiPlayers[currentPlayer]->chooseMove(board.get());
+    char pieceId = move.first;
+    char direction = move.second;
+    
+    // Execute the move
+    Constants::MOVE_RESULT result = players[currentPlayer].move(board.get(), pieceId, direction);
+    
+    // Calculate reward for AI learning
+    bool gameWon = players[currentPlayer].getHasWon();
+    bool gameLost = gameOver() && !gameWon;
+    
+    if (aiTraining) {
+        // Store experience for learning
+        std::vector<float> currentState = aiPlayers[currentPlayer]->boardToStateVector(board.get());
+        int actionIndex = aiPlayers[currentPlayer]->actionToIndex(pieceId, direction);
+        float reward = aiPlayers[currentPlayer]->calculateReward(result, gameWon, gameLost);
+        
+        // For training, we'll update the experience after the next move
+        // This is a simplified approach - in a full implementation you'd store the experience
+        // and update it with the next state after the opponent's move
+    }
+    
+    if (result == Constants::MOVE_SUCCESS || result == Constants::MOVE_KILLED) {
+        if (!aiTraining) {
+            tv->print(std::cout, currentPlayer, POVEnabled);
+            std::cout << "AI Player " << (currentPlayer + 1) << " moved piece " 
+                      << pieceId << " " << direction << std::endl;
+        }
+        return true;  // Valid move made
+    } else {
+        if (!aiTraining) {
+            std::cout << "AI Player " << (currentPlayer + 1) << " made invalid move: " 
+                      << pieceId << " " << direction << std::endl;
+        }
+        return true;  // Still handled, even if invalid
+    }
+}
+
+void Controller::trainAI(int numGames) {
+    if (!aiTraining) {
+        std::cout << "Controller not in training mode!" << std::endl;
+        return;
+    }
+    
+    for (int game = 0; game < numGames; ++game) {
+        // Reset the game
+        // Note: You'll need to implement a reset method for the board
+        currentPlayer = 0;
+        
+        int moves = 0;
+        while (!gameOver() && moves < 200) {  // Limit moves to prevent infinite games
+            if (isAIPlayer(currentPlayer)) {
+                handleAITurn();
+            }
+            
+            if (!nextTurn()) break;
+            moves++;
+        }
+        
+        // Train the AI players after each game
+        for (auto& aiPlayer : aiPlayers) {
+            if (aiPlayer) {
+                aiPlayer->trainOnBatch();
+                aiPlayer->decayEpsilon();  // Reduce exploration over time
+            }
+        }
+        
+        if (game % 100 == 0) {
+            std::cout << "Completed " << game << " training games..." << std::endl;
+            
+            // Save progress
+            for (int i = 0; i < aiPlayers.size(); ++i) {
+                if (aiPlayers[i]) {
+                    std::string filename = "ai_player_" + std::to_string(i) + ".model";
+                    aiPlayers[i]->saveModel(filename);
+                }
+            }
+        }
+    }
+    
+    // Final save
+    for (int i = 0; i < aiPlayers.size(); ++i) {
+        if (aiPlayers[i]) {
+            std::string filename = "ai_player_" + std::to_string(i) + "_final.model";
+            aiPlayers[i]->saveModel(filename);
+        }
+    }
+}
+
+void Controller::playAgainstAI() {
+    // Load trained AI model
+    if (aiPlayers.size() > 1 && aiPlayers[1]) {
+        aiPlayers[1]->loadModel("ai_player_1_final.model");
+        aiPlayers[1]->setEpsilon(0.05);  // Low exploration for playing
+    }
+    
+    // Normal game loop with AI handling
+    play();
+}

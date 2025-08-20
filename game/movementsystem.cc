@@ -39,9 +39,9 @@ Constants::MOVE_RESULT MovementSystem::move(Board& board, char dir) {
         return Constants::MOVE_WALL;
     }
 
-    // Can't move into own trap
-    if (effect && effect->isTrap()) {
-        if (effect->getPlayer() == owner) {
+    // Can't move into own goal
+    if (effect && effect->isGoal()) {
+        if (effect->getPlayer() != owner) {
             return Constants::MOVE_WALL;
         }
     }

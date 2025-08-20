@@ -15,6 +15,7 @@ int main(int argc, char * argv[]) {
     bool useGraphics = false;
     bool viewPerPlayer = false;
     bool POVEnabled = false;
+    bool aiOpponent = false;
 
     for (int i = 1; i < argc; i++) {
         command = argv[i];
@@ -31,8 +32,16 @@ int main(int argc, char * argv[]) {
             viewPerPlayer = true;
         }
 
+        if (command == "-ai") {
+            aiOpponent = true;
+        }
+
         if (command == "-help") {
-            std::cout << "Usage: " << argv[0] << " [-graphics] [-pov] [-splitview]" << std::endl;
+            std::cout << "Usage: " << argv[0] << " [-graphics] [-pov] [-splitview] [-ai]" << std::endl;
+            std::cout << "  -graphics    Enable graphical interface" << std::endl;
+            std::cout << "  -pov         Enable point-of-view mode" << std::endl;
+            std::cout << "  -splitview   Enable split view for multiple players" << std::endl;
+            std::cout << "  -ai          Play against AI (requires trained model)" << std::endl;
             return 0;
         }
     }
@@ -41,8 +50,15 @@ int main(int argc, char * argv[]) {
         numPlayers,
         useGraphics,
         viewPerPlayer,
-        POVEnabled
+        POVEnabled,
+        false  // Not in training mode
     );
+
+    if (aiOpponent) {
+        // Set player 2 as AI
+        controller.setAIPlayer(1, 0.001);
+        std::cout << "Playing against AI! You are Player 1." << std::endl;
+    }
 
     controller.play();
 

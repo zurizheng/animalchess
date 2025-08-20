@@ -46,15 +46,15 @@ GraphicalView::GraphicalView(int boardLength, int boardWidth, int screenIndex, c
     playerColors = {
         {121, 247, 234}, // light teal #79f7ea
         {242, 145, 236}, // light pink #f291ec
-        {144, 178, 245}, // light blue #90b2f5
-        {240, 209, 110} // light mustard yellow #f0d16e
+        // {144, 178, 245}, // light blue #90b2f5
+        // {240, 209, 110} // light mustard yellow #f0d16e
     };
 
     serverPortColors = {
         {210, 252, 247}, // lighter teal #d2fcf7
         {255, 230, 254}, // lighter pink #ffe6fe
-        {214, 228, 255}, // lighter blue #d6e4ff
-        {255, 244, 209} // lighter mustard yellow #fff4d1
+        // {214, 228, 255}, // lighter blue #d6e4ff
+        // {255, 244, 209} // lighter mustard yellow #fff4d1
     };
 
     grid = std::vector<std::vector<TileInfo>>(boardLength, std::vector<TileInfo>(boardWidth));
@@ -78,10 +78,10 @@ GraphicalView::GraphicalView(int boardLength, int boardWidth, int screenIndex, c
 void GraphicalView::convertCoordinatesPOV(int& row, int& col, int POVindex) {
     if (POVindex == 0) {
         row = grid.size() - row - 1;
-        col = grid.size() - col - 1;
+        col = grid[0].size() - col - 1;
     } else if (POVindex == 2) {
         std::swap(row, col);
-        col = grid.size() - col - 1;
+        col = grid[0].size() - col - 1;
     } else if (POVindex == 3) {
         std::swap(row, col);
         row = grid.size() - row - 1;
@@ -96,13 +96,14 @@ void GraphicalView::drawTile(int x, int y, int width, int height, const TileInfo
     std::string text = "";
 
     if (tileInfo.isTrap) {
-        backgroundColor = window.getColor(15, 0, 74); // endpoint shouldn't ever be shown #0f004a
+        backgroundColor = window.getColor(243, 213, 153); // trap color rgba(243, 213, 153, 1)
+        text = "T";
     }
     else if (tileInfo.isWall) {
         backgroundColor = window.getColor(43, 43, 43); // dark grey #2b2b2b
     }
     else if (tileInfo.isGoal) {
-        std::vector<int> serverPortColor = serverPortColors[tileInfo.effectOwner];
+        std::vector<int> serverPortColor = serverPortColors[(tileInfo.effectOwner + 1) % 2];
         backgroundColor = window.getColor(serverPortColor[0], serverPortColor[1], serverPortColor[2]);
         text = "$";
     }
@@ -118,14 +119,8 @@ void GraphicalView::drawTile(int x, int y, int width, int height, const TileInfo
 
     if (tileInfo.hasGamePiece) {
         std::vector<int> playerColor = playerColors[tileInfo.pieceOwner];
-        linkColor = window.getColor(playerColor[0], playerColor[1], playerColor[2]);
-        
+        linkColor = window.getColor(playerColor[0], playerColor[1], playerColor[2]);   
         text = tileInfo.piece;
-        
-        int linkOwner = tileInfo.pieceOwner;
-        bool reveal = (screenIndex == -1) ? (linkOwner == currentPlayer) : (linkOwner == screenIndex);
-
-        text += " " + std::to_string(tileInfo.strength);
     }
 
     // Background with gaps to have small tile borders
@@ -159,7 +154,7 @@ void GraphicalView::drawTile(const Tile& tile) {
     int row = tile.getRow();
     int col = tile.getColumn();
 
-    if (row == 0 || row == grid.size() - 1 || col == 0 || col == grid.size() -1) return;
+    if (row == 0 || row == grid.size() - 1 || col == 0 || col == grid[0].size() -1) return;
     
     // getting the info need to be before conversion happens
     const TileInfo& tileInfo = grid[row][col];
@@ -178,7 +173,7 @@ void GraphicalView::drawTile(const Tile& tile) {
     row--; col--;
 
     // draw just the updated tile
-    drawTile(boardX + col * TILE_SIZE, boardY + row * TILE_SIZE, TILE_SIZE, TILE_SIZE, tileInfo);
+    drawTile(boardX + col * TILE_SIZE + TILE_SIZE, boardY + row * TILE_SIZE, TILE_SIZE, TILE_SIZE, tileInfo);
 
     // window.flush();
 }
@@ -186,7 +181,7 @@ void GraphicalView::drawTile(const Tile& tile) {
 // for single screen
 void GraphicalView::drawWholeBoard() {
     for (int row = 1; row < grid.size() -1; row++) {
-        for (int col = 1; col < grid.size() -1; col++) {
+        for (int col = 1; col < grid[0].size() -1; col++) {
 
             int r = row;
             int c = col;
@@ -209,7 +204,7 @@ void GraphicalView::drawWholeBoard() {
             // for spacing alignment
             r--; c--;
         
-            drawTile(boardX + c * TILE_SIZE, boardY + r * TILE_SIZE, TILE_SIZE, TILE_SIZE, tileInfo);
+            drawTile(boardX + c * TILE_SIZE + TILE_SIZE, boardY + r * TILE_SIZE, TILE_SIZE, TILE_SIZE, tileInfo);
         }
     }
     window.flush();
@@ -232,18 +227,18 @@ void GraphicalView::drawPlayerInfo(int x, int y, int width, int height, int play
         + ((playerIndex == currentPlayer) ? ": <- Active Player" : ":")
     );
 
-    // last 2 info
+    // pieces info
     std::string text = "";
     for (auto& piece : players[playerIndex].pieces) {
-        std::string virusText = std::string(piece.second->getPiece(), 0);
-        std::string strengthText = std::to_string(piece.second->getStrength());
-        text += std::string(1, piece.first) + ": " + virusText + strengthText;
+        std::string pieceText = std::string(0, piece.second->getPiece());
+        std::string isDeadText = (piece.second->isDead() ? "Dead" : "Alive");
+        text += std::string(1, piece.first) + ": " + pieceText + isDeadText;
         
         text += " ";
     }
 
     // print it
-    window.drawString(startX, startY + 3 * LINE_HEIGHT, text);
+    window.drawString(startX, startY + 2 * LINE_HEIGHT, text);
 }
 
 

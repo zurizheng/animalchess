@@ -5,6 +5,7 @@
 #include "player.h"
 #include "view.h"
 #include "graphicalview.h"
+#include "../ai/aiplayer.h"
 
 #include <iostream>
 #include <map>
@@ -22,11 +23,14 @@ class Controller {
     bool useGraphics;
     bool viewPerPlayer;
     bool POVEnabled;
+    bool aiTraining;  // Flag for AI training mode
 
     std::stack<std::unique_ptr<std::istream>> inputStack;
+    std::vector<std::unique_ptr<AIPlayer>> aiPlayers;  // AI players
 
     bool gameOver();
     bool nextTurn();
+    bool handleAITurn();  // Handle AI player turn
     
     void announceWinner(int playerIndex);
 
@@ -35,14 +39,19 @@ class Controller {
     public:
         std::vector<Player> players;
         void play();
+        void trainAI(int numGames);  // AI training function
+        void playAgainstAI();        // Play against trained AI
         Controller(
             int numPlayers,
             bool useGraphics,
             bool viewPerPlayer,
-            bool POVEnabled
+            bool POVEnabled,
+            bool aiTraining = false
         );
 
         void notify(const Tile& tile);
+        void setAIPlayer(int playerIndex, double learningRate = 0.001);
+        bool isAIPlayer(int playerIndex) const;
 };
 
 #endif

@@ -108,13 +108,13 @@ void TextView::printGrid(std::ostream& out, int playerIndex, bool POV) {
 void TextView::convertCoordinatesPOV(int& row, int& col, int POVindex) {
     if (POVindex == 0) {
         row = grid.size() - row - 1;
-        col = grid.size() - col - 1;
+        col = grid[0].size() - col - 1;
     } else if (POVindex == 2) {
         std::swap(row, col);
         row = grid.size() - row - 1;
     } else if (POVindex == 3) {
         std::swap(row, col);
-        col = grid.size() - col - 1;
+        col = grid[0].size() - col - 1;
     }
 }
 
