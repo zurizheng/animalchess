@@ -43,6 +43,7 @@ make all
 | `-ai`        | Play against AI               |
 | `-pov`       | Point-of-view mode            |
 | `-splitview` | Split view for multiplayer    |
+| `-help`      | Prints the list of commands   |
 
 ## Project Structure
 
