@@ -36,8 +36,8 @@ int main(int argc, char* argv[]) {
     Controller controller(2, graphics, false, false, true);  // 2 players, training mode
     
     // Set both players as AI
-    controller.setAIPlayer(0, 0.001);  // Player 1 as AI
-    controller.setAIPlayer(1, 0.001);  // Player 2 as AI
+    controller.setAIPlayer(0, 0.005);  // Player 1 as AI with higher learning rate
+    controller.setAIPlayer(1, 0.005);  // Player 2 as AI with higher learning rate
     
     std::cout << "Starting AI training with " << numGames << " games..." << std::endl;
     if (visualize) {

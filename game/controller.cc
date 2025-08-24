@@ -449,7 +449,7 @@ void Controller::trainAI(int numGames) {
         int moves = 0;
         int winner = -1;  // -1 = draw, 0 = player 1, 1 = player 2
         
-        while (!gameOver() && moves < 200) {  // Limit moves to prevent infinite games
+        while (moves < 500) {  // Allow longer games for AI learning
             if (isAIPlayer(currentPlayer)) {
                 handleAITurn();
             }

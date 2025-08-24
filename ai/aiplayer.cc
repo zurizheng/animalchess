@@ -16,8 +16,8 @@
 AIPlayer::AIPlayer(int index, char startingPiece, double learningRate)
     : Player(index, startingPiece), 
       epsilon(1.0),           // Start with high exploration
-      epsilonDecay(0.995),    // Gradually reduce exploration
-      epsilonMin(0.01),       // Minimum exploration
+      epsilonDecay(0.998),    // Slower decay for longer exploration
+      epsilonMin(0.05),       // Higher minimum exploration
       learningRate(learningRate),
       memorySize(2000),
       memoryIndex(0),
@@ -136,7 +136,10 @@ std::vector<std::pair<char, char>> AIPlayer::getAllValidMoves(Board* board) {
                 validMoves.push_back({pieceId, dir});
             }
         }
-        std::cerr << "  Using fallback: generated " << validMoves.size() << " fallback moves" << std::endl;
+        // Only print fallback message if not in training mode
+        if (!trainingMode) {
+            std::cerr << "  Using fallback: generated " << validMoves.size() << " fallback moves" << std::endl;
+        }
     }
     
     return validMoves;
@@ -214,23 +217,30 @@ std::pair<char, char> AIPlayer::chooseMove(Board* board) {
 }
 
 float AIPlayer::calculateReward(Constants::MOVE_RESULT result, bool gameWon, bool gameLost, Board* board, char pieceId) {
-    if (gameWon) return 100.0f;
-    if (gameLost) return -100.0f;
+    if (gameWon) return 200.0f;   // Much higher win reward to incentivize finishing games
+    if (gameLost) return -100.0f; // Asymmetric - losing hurts less than winning helps
+    
+    float reward = 0.0f;
     
     switch (result) {
         case Constants::MOVE_SUCCESS:
-            return 1.0f + calculateGoalProgressReward(board, pieceId);
+            reward = 0.5f + calculateGoalProgressReward(board, pieceId) * 2.0f; // Reduced ongoing rewards
+            reward += calculatePositionalReward(board) * 0.5f; // Reduced positional rewards
+            break;
         case Constants::MOVE_KILLED:
-            return 10.0f + calculateGoalProgressReward(board, pieceId);  // Capturing enemy piece is good
+            reward = 15.0f + calculateGoalProgressReward(board, pieceId) * 2.0f; // Strong capture incentive
+            reward += calculatePositionalReward(board) * 0.5f;
+            break;
         case Constants::MOVE_INVALID:
         case Constants::MOVE_WALL:
         case Constants::MOVE_OWNPIECE:
         case Constants::MOVE_RAT_INVALID:
         case Constants::MOVE_WATER_INVALID:
-            return 0.0f;  // No penalty for invalid moves - just retry
         default:
-            return 0.0f;
+            reward = 0.0f;
     }
+    
+    return reward;
 }
 
 float AIPlayer::calculateGoalProgressReward(Board* board, char pieceId) {
@@ -260,10 +270,45 @@ float AIPlayer::calculateGoalProgressReward(Board* board, char pieceId) {
     float distanceToGoal = abs(pieceRow - goalRow) + abs(pieceCol - goalCol);
     
     // Give reward based on proximity to goal (closer = better)
-    // Max distance is about 10, so we'll give 0.1 to 2.0 reward
-    float proximityReward = std::max(0.1f, 2.0f - 2*(distanceToGoal / 10.0f));
+    // Max distance is about 10, so we'll give 0.2 to 3.0 reward with exponential scaling
+    float normalizedDistance = distanceToGoal / 10.0f;
+    float proximityReward = 3.0f * exp(-2.0f * normalizedDistance); // Exponential decay for stronger gradient
     
-    return proximityReward;
+    return std::max(0.2f, proximityReward);
+}
+
+float AIPlayer::calculatePositionalReward(Board* board) {
+    float reward = 0.0f;
+    int myPieces = 0;
+    int opponentPieces = 0;
+    int myAdvancedPieces = 0; // Pieces closer to opponent's goal
+    
+    // Count pieces and evaluate positioning
+    for (int r = 0; r < board->getLength(); r++) {
+        for (int c = 0; c < board->getWidth(); c++) {
+            GamePiece* piece = board->getTile(r, c)->getPiece();
+            if (piece) {
+                if (piece->getOwner()->getIndex() == getIndex()) {
+                    myPieces++;
+                    // Reward pieces that are advanced toward goal
+                    int targetRow = (getIndex() == 0) ? 8 : 1;
+                    int distanceToGoal = abs(r - targetRow);
+                    if (distanceToGoal < 4) { // Close to goal
+                        myAdvancedPieces++;
+                        reward += 0.1f;
+                    }
+                } else {
+                    opponentPieces++;
+                }
+            }
+        }
+    }
+    
+    // Reward maintaining pieces and piece advancement
+    reward += (myPieces - 8) * 0.05f; // Small bonus for keeping pieces alive
+    reward += myAdvancedPieces * 0.15f; // Bigger bonus for advanced positioning
+    
+    return reward;
 }
 
 void AIPlayer::remember(const std::vector<float>& state, int action, float reward,

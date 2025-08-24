@@ -60,6 +60,7 @@ public:
     int actionToIndex(char piece, char direction);
     float calculateReward(Constants::MOVE_RESULT result, bool gameWon, bool gameLost, Board* board = nullptr, char pieceId = '0');
     float calculateGoalProgressReward(Board* board, char pieceId);
+    float calculatePositionalReward(Board* board);
     
     // Override the move method to use AI decision making
     std::pair<char, char> chooseMove(Board* board);
