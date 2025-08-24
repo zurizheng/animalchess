@@ -55,9 +55,9 @@ int main(int argc, char * argv[]) {
     );
 
     if (aiOpponent) {
-        // Set player 2 as AI
-        controller.setAIPlayer(1, 0.001);
-        std::cout << "Playing against AI! You are Player 1." << std::endl;
+        // Set player 1 as AI (better performing player from training)
+        controller.setAIPlayer(0, 0.001);
+        std::cout << "Playing against AI! You are Player 2." << std::endl;
     }
 
     controller.play();

@@ -9,6 +9,9 @@
 #include <algorithm>
 #include <iostream>
 #include <cmath>
+#include <cstdlib>
+#include <limits>
+#include <set>
 
 AIPlayer::AIPlayer(int index, char startingPiece, double learningRate)
     : Player(index, startingPiece), 
@@ -18,6 +21,8 @@ AIPlayer::AIPlayer(int index, char startingPiece, double learningRate)
       learningRate(learningRate),
       memorySize(2000),
       memoryIndex(0),
+      totalReward(0.0),
+      trainingMode(false),    // Default to not in training mode
       rng(std::random_device{}())
 {
     // Initialize neural network
@@ -88,21 +93,50 @@ std::vector<std::pair<char, char>> AIPlayer::getAllValidMoves(Board* board) {
     std::vector<std::pair<char, char>> validMoves;
     std::vector<char> directions = {'N', 'S', 'E', 'W'};
     
-    for (const auto& piece : pieces) {
-        if (piece.second && !piece.second->isDead()) {
-            char pieceId = piece.first;
-            
+    // We need to get the actual pieces from the board/game state
+    // since the AI player's pieces map is not properly linked.
+    // We'll check which pieces are alive by examining the board state.
+    
+    // Get all pieces for this player by checking the board tiles
+    std::set<char> alivePieces;
+    for (int row = 0; row < board->getLength(); row++) {
+        for (int col = 0; col < board->getWidth(); col++) {
+            Tile* tile = board->getTile(row, col);
+            if (tile && tile->getPiece() != nullptr) {
+                GamePiece* piece = tile->getPiece();
+                if (piece->getOwner()->getIndex() == getIndex()) {
+                    // This piece belongs to this AI player and is on the board (alive)
+                    char pieceId = piece->getPiece();
+                    alivePieces.insert(pieceId);
+                }
+            }
+        }
+    }
+    
+    // Generate moves only for pieces that are actually alive and on the board
+    for (char pieceId : alivePieces) {
+        for (char dir : directions) {
+            validMoves.push_back({pieceId, dir});
+        }
+    }
+    
+    if (!validMoves.empty()) {
+        if (!trainingMode) {
+            std::cerr << "DEBUG: AI Player " << getIndex() << " found " << alivePieces.size()
+                      << " alive pieces, generated " << validMoves.size() << " potential moves" << std::endl;
+        }
+    } else {
+        if (!trainingMode) {
+            std::cerr << "DEBUG: AI Player " << getIndex() << " found no alive pieces on board!" << std::endl;
+        }
+        
+        // Emergency fallback: generate all possible moves and let the retry mechanism handle invalids
+        for (char pieceId = '1'; pieceId <= '8'; pieceId++) {
             for (char dir : directions) {
-                // Save current position
-                int currentRow = piece.second->getRow();
-                int currentCol = piece.second->getCol();
-                
-                // Try the move by calling the player's move method
-                // We'll simulate this by checking if the move would be valid
-                // For now, add all moves and let the game engine handle validation
                 validMoves.push_back({pieceId, dir});
             }
         }
+        std::cerr << "  Using fallback: generated " << validMoves.size() << " fallback moves" << std::endl;
     }
     
     return validMoves;
@@ -179,24 +213,57 @@ std::pair<char, char> AIPlayer::chooseMove(Board* board) {
     }
 }
 
-float AIPlayer::calculateReward(Constants::MOVE_RESULT result, bool gameWon, bool gameLost) {
+float AIPlayer::calculateReward(Constants::MOVE_RESULT result, bool gameWon, bool gameLost, Board* board, char pieceId) {
     if (gameWon) return 100.0f;
     if (gameLost) return -100.0f;
     
     switch (result) {
         case Constants::MOVE_SUCCESS:
-            return 1.0f;
+            return 1.0f + calculateGoalProgressReward(board, pieceId);
         case Constants::MOVE_KILLED:
-            return 10.0f;  // Capturing enemy piece is good
+            return 10.0f + calculateGoalProgressReward(board, pieceId);  // Capturing enemy piece is good
         case Constants::MOVE_INVALID:
         case Constants::MOVE_WALL:
         case Constants::MOVE_OWNPIECE:
         case Constants::MOVE_RAT_INVALID:
         case Constants::MOVE_WATER_INVALID:
-            return -5.0f;  // Invalid moves are bad
+            return 0.0f;  // No penalty for invalid moves - just retry
         default:
             return 0.0f;
     }
+}
+
+float AIPlayer::calculateGoalProgressReward(Board* board, char pieceId) {
+    // Find the piece that just moved
+    int pieceRow = -1, pieceCol = -1;
+    bool foundPiece = false;
+    
+    for (int r = 0; r < board->getLength() && !foundPiece; r++) {
+        for (int c = 0; c < board->getWidth() && !foundPiece; c++) {
+            if (board->getTile(r, c)->getPiece() && 
+                board->getTile(r, c)->getPiece()->getPiece() == pieceId &&
+                board->getTile(r, c)->getPiece()->getOwner()->getIndex() == getIndex()) {
+                pieceRow = r;
+                pieceCol = c;
+                foundPiece = true;
+            }
+        }
+    }
+    
+    if (!foundPiece) return 0.0f;
+    
+    // Calculate distance to goal
+    // Player 0's goal is at row 8 (near bottom), Player 1's goal is at row 1 (near top)
+    int goalRow = (getIndex() == 0) ? 8 : 1;
+    int goalCol = 4; // Goal is in the center column
+    
+    float distanceToGoal = abs(pieceRow - goalRow) + abs(pieceCol - goalCol);
+    
+    // Give reward based on proximity to goal (closer = better)
+    // Max distance is about 10, so we'll give 0.1 to 2.0 reward
+    float proximityReward = std::max(0.1f, 2.0f - 2*(distanceToGoal / 10.0f));
+    
+    return proximityReward;
 }
 
 void AIPlayer::remember(const std::vector<float>& state, int action, float reward,

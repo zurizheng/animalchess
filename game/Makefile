@@ -9,7 +9,7 @@ OBJECTS=${CCFILES:.cc=.o}
 DEPENDS=${CCFILES:.cc=.d}
 
 # AI objects from ai directory
-AI_OBJECTS=../ai/aiplayer.o ../ai/ainetwork.o
+AI_OBJECTS=../ai/aiplayer.o ../ai/ainetwork.o ../ai/training_visualizer.o
 
 # All objects for the main game
 ALL_OBJECTS=${OBJECTS} ${AI_OBJECTS}

@@ -27,6 +27,11 @@ Controller::Controller(
     bool aiTraining
 ) : currentPlayer{0}, useGraphics{useGraphics}, viewPerPlayer{viewPerPlayer}, POVEnabled{POVEnabled}, aiTraining{aiTraining}
 {
+    // Initialize training visualizer if in training mode
+    if (aiTraining) {
+        visualizer = std::make_unique<TrainingVisualizer>();
+    }
+    
     // Set up initial input stack (default to cin)
     inputStack.push(std::make_unique<std::istream>(std::cin.rdbuf()));
 
@@ -92,7 +97,7 @@ Controller::Controller(
 }
 
 bool Controller::nextTurn() {
-    if (tv) {
+    if (tv && !aiTraining) {
         tv->printEndTurn(std::cout);
     }
 
@@ -102,7 +107,7 @@ bool Controller::nextTurn() {
 
     currentPlayer = (currentPlayer + 1) % players.size();
 
-    if (tv) {
+    if (tv && !aiTraining) {
         tv->printStartTurn(std::cout, currentPlayer);
         tv->print(std::cout, currentPlayer, POVEnabled);
     }
@@ -334,43 +339,60 @@ bool Controller::handleAITurn() {
         return false;  // Not an AI player
     }
     
-    // Get AI move
-    auto move = aiPlayers[currentPlayer]->chooseMove(board.get());
-    char pieceId = move.first;
-    char direction = move.second;
+    // Try multiple moves until we find a valid one
+    const int maxAttempts = 50;  // Prevent infinite loops
+    int attempts = 0;
     
-    // Execute the move
-    Constants::MOVE_RESULT result = players[currentPlayer].move(board.get(), pieceId, direction);
-    
-    // Calculate reward for AI learning
-    bool gameWon = players[currentPlayer].getHasWon();
-    bool gameLost = gameOver() && !gameWon;
-    
-    if (aiTraining) {
-        // Store experience for learning
-        std::vector<float> currentState = aiPlayers[currentPlayer]->boardToStateVector(board.get());
-        int actionIndex = aiPlayers[currentPlayer]->actionToIndex(pieceId, direction);
-        float reward = aiPlayers[currentPlayer]->calculateReward(result, gameWon, gameLost);
+    while (attempts < maxAttempts) {
+        // Get AI move
+        auto move = aiPlayers[currentPlayer]->chooseMove(board.get());
+        char pieceId = move.first;
+        char direction = move.second;
         
-        // For training, we'll update the experience after the next move
-        // This is a simplified approach - in a full implementation you'd store the experience
-        // and update it with the next state after the opponent's move
+        // Execute the move
+        Constants::MOVE_RESULT result = players[currentPlayer].move(board.get(), pieceId, direction);
+        
+        // Calculate reward for AI learning
+        bool gameWon = players[currentPlayer].getHasWon();
+        bool gameLost = gameOver() && !gameWon;
+        
+        if (aiTraining) {
+            // Only store experience and add rewards for valid moves
+            if (result == Constants::MOVE_SUCCESS || result == Constants::MOVE_KILLED) {
+                // Store experience for AI learning
+                std::vector<float> currentState = aiPlayers[currentPlayer]->boardToStateVector(board.get());
+                int actionIndex = aiPlayers[currentPlayer]->actionToIndex(pieceId, direction);
+                float reward = aiPlayers[currentPlayer]->calculateReward(result, gameWon, gameLost, board.get(), pieceId);
+                
+                // Add reward to the AI player's total for this game
+                aiPlayers[currentPlayer]->addReward(reward);
+            }
+            // Invalid moves are simply ignored - no negative reinforcement
+        }
+        
+        if (result == Constants::MOVE_SUCCESS || result == Constants::MOVE_KILLED) {
+            if (!aiTraining) {
+                tv->print(std::cout, currentPlayer, POVEnabled);
+                std::cout << "AI Player " << (currentPlayer + 1) << " moved piece " 
+                          << pieceId << " " << direction << std::endl;
+            }
+            return true;  // Valid move made
+        } else {
+            // Invalid move, try again
+            attempts++;
+            if (!aiTraining && attempts <= 3) {  // Only show first few invalid attempts
+                std::cout << "AI Player " << (currentPlayer + 1) << " made invalid move: " 
+                          << pieceId << " " << direction << " (attempt " << attempts << ")" << std::endl;
+            }
+        }
     }
     
-    if (result == Constants::MOVE_SUCCESS || result == Constants::MOVE_KILLED) {
-        if (!aiTraining) {
-            tv->print(std::cout, currentPlayer, POVEnabled);
-            std::cout << "AI Player " << (currentPlayer + 1) << " moved piece " 
-                      << pieceId << " " << direction << std::endl;
-        }
-        return true;  // Valid move made
-    } else {
-        if (!aiTraining) {
-            std::cout << "AI Player " << (currentPlayer + 1) << " made invalid move: " 
-                      << pieceId << " " << direction << std::endl;
-        }
-        return true;  // Still handled, even if invalid
+    // If we get here, AI couldn't find a valid move after many attempts
+    if (!aiTraining) {
+        std::cout << "AI Player " << (currentPlayer + 1) << " failed to find valid move after " 
+                  << maxAttempts << " attempts!" << std::endl;
     }
+    return true;  // Still handled, but no valid move found
 }
 
 void Controller::trainAI(int numGames) {
@@ -379,12 +401,54 @@ void Controller::trainAI(int numGames) {
         return;
     }
     
+    std::cout << "Starting AI training with visualization..." << std::endl;
+    
+    // Set training mode for all AI players to suppress debug output
+    for (auto& aiPlayer : aiPlayers) {
+        if (aiPlayer) {
+            aiPlayer->setTrainingMode(true);
+        }
+    }
+    
     for (int game = 0; game < numGames; ++game) {
-        // Reset the game
-        // Note: You'll need to implement a reset method for the board
+        // Reset the game for each training iteration
         currentPlayer = 0;
         
+        // Re-initialize the board and players for each game
+        std::string boardLayoutFile = Constants::BOARD_2_PLAYER;
+        std::ifstream layoutFile{boardLayoutFile};
+        std::vector<std::string> layout;
+        std::string line;
+        while (std::getline(layoutFile, line)) {
+            layout.push_back(line);
+        }
+        layoutFile.close();
+        
+        // Reset players (just reset win state, pieces will be recreated by board init)
+        for (auto& player : players) {
+            player.setHasWon(false);
+        }
+        
+        // Re-create the board
+        int boardLength = Constants::BOARD_SIZE_2_PLAYER;
+        int boardWidth = Constants::BOARD_WIDTH_2_PLAYER;
+        board = std::make_unique<Board>(boardLength, boardWidth, this);
+        bool initSuccess = board->init(layout, players);
+        if (!initSuccess) {
+            std::cerr << "Failed to initialize board for game " << (game + 1) << std::endl;
+            continue;
+        }
+        
+        // Reset AI rewards for this game
+        for (auto& aiPlayer : aiPlayers) {
+            if (aiPlayer) {
+                aiPlayer->resetGameReward();
+            }
+        }
+        
         int moves = 0;
+        int winner = -1;  // -1 = draw, 0 = player 1, 1 = player 2
+        
         while (!gameOver() && moves < 200) {  // Limit moves to prevent infinite games
             if (isAIPlayer(currentPlayer)) {
                 handleAITurn();
@@ -392,6 +456,35 @@ void Controller::trainAI(int numGames) {
             
             if (!nextTurn()) break;
             moves++;
+        }
+        
+        // Determine winner
+        if (gameOver()) {
+            // Check which player actually won by checking their win status
+            if (players[0].getHasWon()) {
+                winner = 0;  // Player 1 wins
+            } else if (players[1].getHasWon()) {
+                winner = 1;  // Player 2 wins
+            } else {
+                winner = -1; // Draw (shouldn't happen if gameOver() returned true)
+            }
+        } else {
+            // Game ended due to move limit - it's a draw
+            winner = -1;
+        }
+        
+        // Record game rewards for each AI player
+        for (auto& aiPlayer : aiPlayers) {
+            if (aiPlayer) {
+                aiPlayer->recordGameReward();
+            }
+        }
+        
+        // Add data to visualizer
+        if (visualizer && aiPlayers.size() >= 2 && aiPlayers[0] && aiPlayers[1]) {
+            double p1Reward = aiPlayers[0]->getLastGameReward();
+            double p2Reward = aiPlayers[1]->getLastGameReward();
+            visualizer->addGameResult(game + 1, p1Reward, p2Reward, winner);
         }
         
         // Train the AI players after each game
@@ -402,8 +495,20 @@ void Controller::trainAI(int numGames) {
             }
         }
         
-        if (game % 100 == 0) {
-            std::cout << "Completed " << game << " training games..." << std::endl;
+        // Display progress and visualizations periodically
+        if ((game + 1) % 100 == 0) {
+            std::cout << "Completed " << (game + 1) << " training games..." << std::endl;
+            
+            // Show training visualizations
+            if (visualizer) {
+                visualizer->printRewardProgress();
+                visualizer->printWinRateProgress();
+                visualizer->printSummary();
+                
+                // Save data incrementally during training
+                visualizer->saveDataCSV("training_data.csv");
+                visualizer->generateGnuplotScript("plot_training.gp");
+            }
             
             // Save progress
             for (int i = 0; i < aiPlayers.size(); ++i) {
@@ -413,6 +518,28 @@ void Controller::trainAI(int numGames) {
                 }
             }
         }
+        
+        // Show quick progress for smaller intervals
+        if ((game + 1) % 25 == 0 && (game + 1) % 100 != 0) {
+            std::cout << "Progress: " << (game + 1) << "/" << numGames << " games";
+            if (visualizer && aiPlayers.size() >= 2 && aiPlayers[0] && aiPlayers[1]) {
+                std::cout << " | Recent rewards: P1=" << aiPlayers[0]->getLastGameReward() 
+                         << ", P2=" << aiPlayers[1]->getLastGameReward();
+            }
+            std::cout << std::endl;
+        }
+    }
+    
+    // Final visualization and data export
+    if (visualizer) {
+        std::cout << "\nTraining Complete! Final Results:" << std::endl;
+        visualizer->printRewardProgress();
+        visualizer->printWinRateProgress();
+        visualizer->printSummary();
+        
+        // Save training data for external analysis
+        visualizer->saveDataCSV("training_data.csv");
+        visualizer->generateGnuplotScript("plot_training.gp");
     }
     
     // Final save
@@ -420,15 +547,17 @@ void Controller::trainAI(int numGames) {
         if (aiPlayers[i]) {
             std::string filename = "ai_player_" + std::to_string(i) + "_final.model";
             aiPlayers[i]->saveModel(filename);
+            // Disable training mode after training completes
+            aiPlayers[i]->setTrainingMode(false);
         }
     }
 }
 
 void Controller::playAgainstAI() {
-    // Load trained AI model
-    if (aiPlayers.size() > 1 && aiPlayers[1]) {
-        aiPlayers[1]->loadModel("ai_player_1_final.model");
-        aiPlayers[1]->setEpsilon(0.05);  // Low exploration for playing
+    // Load trained AI model (Player 1 - index 0, the better performer)
+    if (aiPlayers.size() > 0 && aiPlayers[0]) {
+        aiPlayers[0]->loadModel("ai_player_0_final.model");
+        aiPlayers[0]->setEpsilon(0.05);  // Low exploration for playing
     }
     
     // Normal game loop with AI handling

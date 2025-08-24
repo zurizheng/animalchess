@@ -155,7 +155,7 @@ bool MovementSystem::battle(GamePiece* opponent) {
     }
 
     // Winner remains on board
-    std::cout << "[INFO] Player " << winner->getIndex() + 1 << " wins battle vs Player " << loser->getIndex() + 1 << std::endl;
+    // std::cout << "[INFO] Player " << winner->getIndex() + 1 << " wins battle vs Player " << loser->getIndex() + 1 << std::endl;
 
     defeatedGamePiece->remove();
 

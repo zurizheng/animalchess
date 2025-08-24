@@ -5,3 +5,4 @@ animalchess
 .vscode
 *.model
 aitrain
+*.csv

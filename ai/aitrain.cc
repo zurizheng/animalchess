@@ -10,6 +10,7 @@ int main(int argc, char* argv[]) {
     // Parse command line arguments
     int numGames = 1000;
     bool graphics = false;
+    bool visualize = true;  // Enable visualization by default
     
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -18,11 +19,14 @@ int main(int argc, char* argv[]) {
             i++;
         } else if (arg == "-graphics") {
             graphics = true;
+        } else if (arg == "-novis") {
+            visualize = false;
         } else if (arg == "-help") {
             std::cout << "Usage: " << argv[0] << " [options]" << std::endl;
             std::cout << "Options:" << std::endl;
             std::cout << "  -games N     Number of training games (default: 1000)" << std::endl;
             std::cout << "  -graphics    Enable graphics during training" << std::endl;
+            std::cout << "  -novis       Disable training visualization" << std::endl;
             std::cout << "  -help        Show this help message" << std::endl;
             return 0;
         }
@@ -36,6 +40,11 @@ int main(int argc, char* argv[]) {
     controller.setAIPlayer(1, 0.001);  // Player 2 as AI
     
     std::cout << "Starting AI training with " << numGames << " games..." << std::endl;
+    if (visualize) {
+        std::cout << "Training visualization enabled" << std::endl;
+        std::cout << "Graphs will show progress every 100 games" << std::endl;
+        std::cout << "Final CSV data will be saved to training_data.csv" << std::endl;
+    }
     
     // Train the AI
     controller.trainAI(numGames);

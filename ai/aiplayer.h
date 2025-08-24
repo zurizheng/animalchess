@@ -36,6 +36,13 @@ private:
     std::vector<Experience> memory;
     int memoryIndex;
     
+    // Reward tracking for visualization
+    double totalReward;
+    std::vector<double> gameRewards;
+    
+    // Training mode flag (suppress debug output during training)
+    bool trainingMode;
+    
     // Helper methods (private)
     std::vector<std::pair<char, char>> getAllValidMoves(Board* board);
     std::pair<char, char> indexToAction(int index);
@@ -51,7 +58,8 @@ public:
     // Public methods so Controller can access them
     std::vector<float> boardToStateVector(Board* board);
     int actionToIndex(char piece, char direction);
-    float calculateReward(Constants::MOVE_RESULT result, bool gameWon, bool gameLost);
+    float calculateReward(Constants::MOVE_RESULT result, bool gameWon, bool gameLost, Board* board = nullptr, char pieceId = '0');
+    float calculateGoalProgressReward(Board* board, char pieceId);
     
     // Override the move method to use AI decision making
     std::pair<char, char> chooseMove(Board* board);
@@ -73,6 +81,19 @@ public:
             epsilon *= epsilonDecay;
         }
     }
+    
+    // Training mode control
+    void setTrainingMode(bool training) { trainingMode = training; }
+    bool isTrainingMode() const { return trainingMode; }
+    
+    // Reward tracking methods
+    void addReward(double reward) { totalReward += reward; }
+    void resetGameReward() { totalReward = 0.0; }
+    void recordGameReward() { gameRewards.push_back(totalReward); }
+    double getLastGameReward() const { 
+        return gameRewards.empty() ? 0.0 : gameRewards.back(); 
+    }
+    const std::vector<double>& getAllGameRewards() const { return gameRewards; }
 };
 
 #endif

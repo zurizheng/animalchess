@@ -6,6 +6,7 @@
 #include "view.h"
 #include "graphicalview.h"
 #include "../ai/aiplayer.h"
+#include "../ai/training_visualizer.h"
 
 #include <iostream>
 #include <map>
@@ -27,6 +28,7 @@ class Controller {
 
     std::stack<std::unique_ptr<std::istream>> inputStack;
     std::vector<std::unique_ptr<AIPlayer>> aiPlayers;  // AI players
+    std::unique_ptr<TrainingVisualizer> visualizer;    // Training visualization
 
     bool gameOver();
     bool nextTurn();

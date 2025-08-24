@@ -7,7 +7,7 @@ A strategy board game with AI opponents powered by deep reinforcement learning.
 
 ## About
 
-Animal Chess is based on the classic "Dou Shou Qi" (Fight of Animals). Players move animal pieces with different abilities across a board with water, traps, and dens. The goal: reach the opponent’s den or capture all their pieces.
+Animal Chess is based on the classic "Dou Shou Qi". Players move animal pieces with different abilities across a board with water, traps, and dens. The goal: reach the opponent’s den or capture all their pieces.
 
 ## Features
 
